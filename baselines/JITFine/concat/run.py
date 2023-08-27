@@ -291,6 +291,8 @@ def test(args, model, tokenizer, best_threshold=0.5):
         print("  %s = %s", key, str(round(result[key], 4)))
 
     result = []
+    res_loc = pd.DataFrame(columns = ['idx', 'token', 'score', 'commit_id', 'label'])
+ 
 
     cache_buggy_line = os.path.join(os.path.dirname(args.buggy_line_filepath),
                                     'changes_complete_buggy_line_level_cache.pkl')
@@ -309,7 +311,7 @@ def test(args, model, tokenizer, best_threshold=0.5):
             cur_codes = commit2codes[commit2codes['commit_id'] == example.commit_id]
             cur_labels = idx2label[idx2label['commit_id'] == example.commit_id]
             if cur_codes.empty: continue
-            cur_IFA, cur_top_20_percent_LOC_recall, cur_effort_at_20_percent_LOC_recall, cur_top_10_acc, cur_top_5_acc = deal_with_attns(
+            cur_IFA, cur_top_20_percent_LOC_recall, cur_effort_at_20_percent_LOC_recall, cur_top_10_acc, cur_top_5_acc, result_df = deal_with_attns(
                 example, attn,
                 pred, cur_codes,
                 cur_labels, args.only_adds)
@@ -318,6 +320,7 @@ def test(args, model, tokenizer, best_threshold=0.5):
             effort_at_20_percent_LOC_recall.append(cur_effort_at_20_percent_LOC_recall)
             top_10_acc.append(cur_top_10_acc)
             top_5_acc.append(cur_top_5_acc)
+            res_loc = pd.concat([res_loc, result_df], ignore_index=True)
 
     print(
         'Top-5-ACC: {:.4f},Top-10-ACC: {:.4f}, Recall20%Effort: {:.4f}, Effort@20%LOC: {:.4f}, IFA: {:.4f}'.format(
@@ -327,6 +330,8 @@ def test(args, model, tokenizer, best_threshold=0.5):
     )
     RF_result = pd.DataFrame(result)
     RF_result.to_csv(os.path.join(args.output_dir, "predictions.csv"), sep='\t', index=None)
+    # res_loc = res_loc.reset_index().drop('index', axis=1)
+    res_loc.to_csv('res_localization.csv', index=False)
 
 
 def commit_with_codes(filepath, tokenizer):
@@ -380,13 +385,13 @@ def deal_with_attns(item, attns, pred, commit2codes, idx2label, only_adds=False)
     commit2codes = commit2codes.drop('changed_type', axis=1)
 
     result_df = pd.merge(commit2codes, attn_df, how='left', on='token')
-    result_df = result_df.groupby(['idx']).sum()
+    result_df = result_df.groupby(['idx']).sum(numeric_only=False)
     result_df = result_df.reset_index(drop=False)
 
     result_df = pd.merge(result_df, idx2label, how='inner', on='idx')
     
     IFA, top_20_percent_LOC_recall, effort_at_20_percent_LOC_recall, top_10_acc, top_5_acc = get_line_level_metrics(result_df['score'].tolist(), result_df['label'].tolist())
-    return IFA, top_20_percent_LOC_recall, effort_at_20_percent_LOC_recall, top_10_acc, top_5_acc
+    return IFA, top_20_percent_LOC_recall, effort_at_20_percent_LOC_recall, top_10_acc, top_5_acc, result_df
 
 
 def parse_args():
