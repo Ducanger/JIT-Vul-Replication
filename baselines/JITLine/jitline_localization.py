@@ -318,6 +318,7 @@ def eval_line_level_at_commit(cur_proj, data_path):
     bal_ACC_df = create_tmp_df(all_commits, score_cols)
 
     idx = 0
+    res_loc = pd.DataFrame(columns = ['commit_id', 'total_tokens', 'line_level_label', 'line_score', 'row'])
 
     for commit in all_commits:
         idx += 1
@@ -335,11 +336,12 @@ def eval_line_level_at_commit(cur_proj, data_path):
         scaler = MinMaxScaler()
         line_score = scaler.fit_transform(np.array(to_save_df['sum-all-tokens']).reshape(-1, 1))
         to_save_df['line_score'] = line_score.reshape(-1, 1)  # to remove [...] in numpy array
-        to_save_df = to_save_df.drop(['sum-all-tokens', 'commit_id'], axis=1)
+        to_save_df = to_save_df.drop(['sum-all-tokens'], axis=1)
         to_save_df = to_save_df.sort_values(by='line_score', ascending=False)
         to_save_df['row'] = np.arange(1, len(to_save_df) + 1)
-        to_save_df.to_csv(data_path + '/line-level_ranking_result/' + cur_proj + '_' + str(commit) + '.csv',
-                          index=False)
+        # to_save_df.to_csv(data_path + '/line-level_ranking_result/' + cur_proj + '_' + str(commit) + '.csv',
+        #                   index=False)
+        res_loc = pd.concat([res_loc, to_save_df], ignore_index=True)
 
         line_label = list(cur_RF_result['line_level_label'])
 
@@ -371,12 +373,13 @@ def eval_line_level_at_commit(cur_proj, data_path):
         data_path + './text_metric_line_eval_result/' + cur_proj + '_top_10_acc_min_df_3_300_trees.csv')
     top_5_acc_df.to_csv(
         data_path + './text_metric_line_eval_result/' + cur_proj + '_top_5_acc_min_df_3_300_trees.csv')
+    res_loc.to_csv('localization_result/res_localization.csv', index=False)
 
     print('finish', cur_proj)
 
 
 def plot_result(cur_proj):
-    metrics = ['top_10_acc', 'top_5_acc' 'recall_20_percent_effort', 'effort_20_percent_recall', 'IFA']
+    metrics = ['top_10_acc', 'top_5_acc', 'recall_20_percent_effort', 'effort_20_percent_recall', 'IFA']
     metrics_label = ['Top-10-ACC', 'Top-5-ACC', 'Recall20%Effort', 'Effort@20%LOC', 'IFA']
 
     for i in range(0, 5):
@@ -409,9 +412,9 @@ if __name__ == '__main__':
     k_neighbors = 9  # get from DE_SMOTE in jitline_rq1.py
     openstack_line_level = eval_line_level('changes', k_neighbors, split_data)
 
-    pd.concat(openstack_line_level).to_csv(data_path + 'changes_line_level_result_min_df_3_300_trees.csv',
-                                           index=False)
-    ## Defective line ranking evaluation
+    pd.concat(openstack_line_level).to_csv(data_path + 'changes_line_level_result_min_df_3_300_trees.csv', index=False)
+    
+    # Defective line ranking evaluation
 
     score_cols = [agg + '-top-' + str(k) + '-tokens' for agg in agg_methods for k in top_k_tokens] + [
         agg + '-all-tokens'

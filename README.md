@@ -38,9 +38,20 @@ Precision: 0.5717, Recall: 0.7304, F1: 0.6414,  AUC: 0.6956, ACC: 0.7709, PCI@20
 python -m baselines.JITLine.jitline -split cross_project
 ```
 * Localization
+  
+Top-10-ACC:mean:0.524,
+Top-5-ACC:mean:0.3665,
+Recall20%Effort:mean:0.2791,
+Effort@20%LOC:mean:0.3031,
+IFA:mean:63.8204
 ```
 python -m baselines.JITLine.jitline_localization -split by_time
 ```
+Top-10-ACC:mean:0.524,
+Top-5-ACC:mean:0.3665,
+Recall20%Effort:mean:0.2791,
+Effort@20%LOC:mean:0.3031,
+IFA:mean:63.8204
 ```
 python -m baselines.JITLine.jitline_localization -split cross_project
 ```
